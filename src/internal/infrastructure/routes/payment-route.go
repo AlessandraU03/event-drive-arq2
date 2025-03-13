@@ -5,7 +5,6 @@ import (
 	"payment/src/internal/application/services"
 	"payment/src/internal/infrastructure/adapters"
 	"payment/src/internal/infrastructure/controllers"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -16,12 +15,11 @@ func SetupRouter() *gin.Engine {
 
 	// Configuración de CORS
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://13.217.156.220"}, 
-		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type"},
+		AllowOrigins:     []string{"*"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
 	}))
 
 	// Crear el adaptador RabbitMQ
