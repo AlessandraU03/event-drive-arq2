@@ -1,5 +1,3 @@
-// infrastructure/routes/routes.go
-
 package routes
 
 import (
@@ -7,13 +5,24 @@ import (
 	"payment/src/internal/application/services"
 	"payment/src/internal/infrastructure/adapters"
 	"payment/src/internal/infrastructure/controllers"
+	"time"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/googollee/go-socket.io"
 )
 
-// SetupRouter configura las rutas de la API
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
+
+	// Configuración de CORS
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"}, 
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Crear el adaptador RabbitMQ
 	rabbitAdapter, err := adapters.NewRabbitMQAdapter()
@@ -21,26 +30,28 @@ func SetupRouter() *gin.Engine {
 		log.Fatal("Error al crear el adaptador RabbitMQ: ", err)
 	}
 
-	// Crear el servidor Socket.io
-	socketServer := socketio.NewServer(nil)
-
-	// Crear el servicio de notificación (que utiliza Socket.io)
-	notificationService := services.NewNotificationService(socketServer)
+	// Crear el servicio de notificación
+	notificationService := services.NewNotificationService()
 
 	// Crear el controlador de procesamiento de pagos
-	paymentProcessorController := controllers.NewPaymentProcessorController(rabbitAdapter, socketServer, notificationService)
+	paymentProcessorController := controllers.NewPaymentProcessorController(rabbitAdapter, notificationService)
 
-	// Ruta para procesar los pagos (aunque en este caso el consumidor de RabbitMQ ya está escuchando)
-	// Esta ruta se puede agregar si se quiere hacer una validación o integración adicional
-	router.POST("/procesar_pago", func(c *gin.Context) {
-		paymentProcessorController.ConsumePedido()
+	// Ruta para procesar pagos
+	router.GET("/procesar_pago", func(c *gin.Context) {
+		pedidoID := c.DefaultQuery("pedido_id", "")
+		if pedidoID == "" {
+			c.JSON(400, gin.H{"error": "El parámetro 'pedido_id' es obligatorio"})
+			return
+		}
+
+		log.Println("✅ Procesando pedido con ID:", pedidoID)
+		// Ejecutar el controlador para consumir procesados
+		paymentProcessorController.ConsumeProcesados(c.Writer, c.Request)
+
 	})
 
-	// Configuración del WebSocket para notificaciones en tiempo real
-	router.GET("/socket.io/", gin.WrapH(socketServer))
-
-	// Rutas para escuchar el procesamiento de pedidos y pagos
-	go paymentProcessorController.ConsumePedido()
+	// Iniciar el consumidor de RabbitMQ en segundo plano
+	go paymentProcessorController.ProcessarPedidosEnSegundoPlano()
 
 	return router
 }

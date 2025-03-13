@@ -3,7 +3,6 @@ package repositories
 import ( 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
-// Interfaz para interactuar con RabbitMQ
 type IRabbitMQ interface {
     Connect() error
     Close() error
