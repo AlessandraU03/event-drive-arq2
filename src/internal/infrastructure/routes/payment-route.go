@@ -16,7 +16,7 @@ func SetupRouter() *gin.Engine {
 
 	// Configuración de CORS
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"}, 
+		AllowOrigins:     []string{"http://13.217.156.220"}, 
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
